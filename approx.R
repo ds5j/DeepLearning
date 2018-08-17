@@ -31,22 +31,38 @@ train_target=y_function(train_data)
 
 test_data=matrix(seq(0,6.28,6.28/100))
 test_target=y_function(test_data,0,0)
+
+
+
+
+## get gradients
+get_grad=function(model,train_data)
+{
+  K  <- backend()
+  wt <- model$trainable_weights
+  grad <- K$gradients( model$output, wt)
+  
+  sess=K$get_session()
+  #print(sess$run( grad, feed_dict = dict(input_layer=x) ))
+  g=sess$run( grad, feed_dict = dict(input_layer=train_data) )
+  return(sum(unlist(g)^2))
+}
 #####################################################################################################
 ####################################################################################################
 predictions=vector(mode="list")
 models=vector(mode="list")
 
+#train_data=normalize(train_data)
 num_hidden_units=100
-
+lr0=.2/num_hidden_units
 #without train dim it errors on summary
-model_simple <- keras_model_sequential() %>% 
-  layer_dense(units = num_hidden_units,input_shape = dim(train_data)[[2]],activation='tanh'
-           #   ,kernel_regularizer = regularizer_l2(l =.01) 
-              
-              ) %>%
-  layer_dense(units = 1) 
+
+input_layer <- layer_input(shape = 1, name = 'input')
+output_layer <- input_layer %>% layer_dense(units = 100, activation = 'tanh') %>%  layer_dense(units = 1) 
+model_simple <- keras_model(inputs = input_layer, outputs = output_layer )
+
 #,clipnorm=1,,clipvalue=1
-opt <- optimizer_sgd(lr = 0.01)
+opt <- optimizer_sgd(lr = lr0)
 
 model_simple %>% compile(
   optimizer = opt, 
@@ -54,24 +70,39 @@ model_simple %>% compile(
   metrics = c("mae")
 )
 
-lr_schedule <- function(epoch,lr) {  .01/(1+(epoch/5000)) }
+lr_schedule <- function(epoch,lr) {  lr0/(1+(epoch/5)) }
 lr_reducer <- callback_learning_rate_scheduler(lr_schedule)
 
-epochs=20000
-
+epochs=30
+wgts=NA
 summary(model_simple)
 #,callback_model_checkpoint("checkpoints.h5")
 hist_approx<-model_simple %>% fit(train_data, train_target,
-              epochs = epochs, batch_size = 10, verbose = 0,list(lr_reducer)
-              )
+              epochs = epochs, batch_size = 10, verbose = 0
+#              ,callback_lambda(on_epoch_begin=(print(paste(get_weights(model_simple)))))
+#              ,callback_reduce_lr_on_plateau, #,list(lr_reducer)
+,callback_lambda( on_epoch_begin = function(epoch, logs) {
+  cat("Epoch Begin\n")
+  wgts=get_weights(model_simple)
+  #save(wgts,file='a')
+  print(sum(unlist(wgts)^2))
+  #print(matrix(wgts,ncol=1,byrow=T))
+  print(get_grad(model_simple,train_data))
+  
+}
+)
+
+)
+              
 
 plot(hist_approx)
+print(hist_approx)
 #, callback_tensorboard("logs/run_a")
 #tensorboard("logs/run_a")
 
 
 result <- model_simple %>% evaluate(test_data, test_target)
-pred=predict(model_simple,test_data)
+pred=predict(model_simple,(test_data))
 predictions[[num_hidden_units]]=pred
 models[[num_hidden_units]]=model_simple
 
