@@ -10,7 +10,8 @@ num_test=4
 train_data=matrix(runif(num_train,-3,3))
 train_target=train_data^2
 # test
-test_data=matrix(runif(num_test,-3,3))=seq(-3, 3, length.out = 4)
+test_data=matrix(runif(num_test,-3,3))
+test_data=seq(-3, 3, length.out = 4)
 test_target=test_data^2
 
 gen_noise=function(x,a=-.25,b=.25)
@@ -53,12 +54,12 @@ predictions=vector(mode="list")
 models=vector(mode="list")
 
 #train_data=normalize(train_data)
-num_hidden_units=100
-lr0=.2/num_hidden_units
+num_hidden_units=4
+lr0=.5/num_hidden_units
 #without train dim it errors on summary
-
+l2reg=.00008
 input_layer <- layer_input(shape = 1, name = 'input')
-output_layer <- input_layer %>% layer_dense(units = 100, activation = 'tanh') %>%  layer_dense(units = 1) 
+output_layer <- input_layer %>% layer_dense(units = num_hidden_units, activation = 'tanh',kernel_regularizer = regularizer_l2(l2reg))  %>% layer_dense(units = 1,,kernel_regularizer = regularizer_l2(l2reg)) 
 model_simple <- keras_model(inputs = input_layer, outputs = output_layer )
 
 #,clipnorm=1,,clipvalue=1
@@ -73,7 +74,7 @@ model_simple %>% compile(
 lr_schedule <- function(epoch,lr) {  lr0/(1+(epoch/5)) }
 lr_reducer <- callback_learning_rate_scheduler(lr_schedule)
 
-epochs=30
+epochs=20000
 wgts=NA
 summary(model_simple)
 #,callback_model_checkpoint("checkpoints.h5")
