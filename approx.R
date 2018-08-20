@@ -74,6 +74,22 @@ model_simple %>% compile(
 lr_schedule <- function(epoch,lr) {  lr0/(1+(epoch/5)) }
 lr_reducer <- callback_learning_rate_scheduler(lr_schedule)
 
+# define custom callback class
+LossHistory <- R6::R6Class("LossHistory",
+                           inherit = KerasCallback,
+                           
+                           public = list(
+                             
+                             losses = NULL,
+                             
+                             on_epoch_end = function(batch, logs = list()) {
+                               self$losses <- c(self$losses, logs[["loss"]])
+                               print(paste('losses:',self$losses[length(self$losses)]))
+                             }
+                           ))
+history <- LossHistory$new()
+
+
 epochs=20000
 wgts=NA
 summary(model_simple)
@@ -82,16 +98,13 @@ hist_approx<-model_simple %>% fit(train_data, train_target,
               epochs = epochs, batch_size = 10, verbose = 0
 #              ,callback_lambda(on_epoch_begin=(print(paste(get_weights(model_simple)))))
 #              ,callback_reduce_lr_on_plateau, #,list(lr_reducer)
-,callback_lambda( on_epoch_begin = function(epoch, logs) {
+,callbacks= list(callback_lambda( on_epoch_begin = function(epoch, logs) {
   cat("Epoch Begin\n")
+  print(paste('epoch:',epoch))
   wgts=get_weights(model_simple)
-  #save(wgts,file='a')
-  print(sum(unlist(wgts)^2))
-  #print(matrix(wgts,ncol=1,byrow=T))
-  print(get_grad(model_simple,train_data))
-  
+  print(paste('wgt norm:',sum(unlist(wgts)^2), 'gradient norm:',get_grad(model_simple,train_data)))
 }
-)
+),history)
 
 )
               
@@ -116,28 +129,4 @@ legend( x="topleft",
         col=c("blue","red"), lwd=1, lty=c(1,2), 
          )
 
-
-
-
-
-
-############################################################
-K  <- backend()
-wt <- model$trainable_weights
-grad <- K$gradients( model$output, wt)[[1]]
-
-# Normalize gradients.
-grads <- grads / k_maximum(k_mean(k_abs(grads)), k_epsilon())
-
-# Set up function to retrieve the value
-# of the loss and gradients given an input image.
-fetch_loss_and_grads <- k_function(list(dream), list(loss,grads))
-
-eval_loss_and_grads <- function(image){
-  outs <- fetch_loss_and_grads(list(image))
-  list(
-    loss_value = outs[[1]],
-    grad_values = outs[[2]]
-  )
-}
 ##################################################################
