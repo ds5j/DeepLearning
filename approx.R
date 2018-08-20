@@ -82,7 +82,7 @@ LossHistory <- R6::R6Class("LossHistory",
                              
                              losses = NULL,
                              
-                             on_epoch_end = function(batch, logs = list()) {
+                             on_epoch_end = function(epoch, logs = list()) {
                                self$losses <- c(self$losses, logs[["loss"]])
                                print(paste('losses:',self$losses[length(self$losses)]))
                              }
@@ -98,13 +98,16 @@ hist_approx<-model_simple %>% fit(train_data, train_target,
               epochs = epochs, batch_size = 10, verbose = 0
 #              ,callback_lambda(on_epoch_begin=(print(paste(get_weights(model_simple)))))
 #              ,callback_reduce_lr_on_plateau, #,list(lr_reducer)
-,callbacks= list(callback_lambda( on_epoch_begin = function(epoch, logs) {
+,callbacks= list(callback_lambda( on_epoch_end = function(epoch, logs=list()) {
   cat("Epoch Begin\n")
   print(paste('epoch:',epoch))
   wgts=get_weights(model_simple)
-  print(paste('wgt norm:',sum(unlist(wgts)^2), 'gradient norm:',get_grad(model_simple,train_data)))
+  print(paste('wgt norm:',sum(unlist(wgts)^2), 'gradient norm:',get_grad(model_simple,train_data),'loss:',logs[["loss"]]))
+
+  
+  #print(paste('losses:',logs[["loss"]][length(logs[["loss"]])]))
 }
-),history)
+))
 
 )
               
