@@ -68,19 +68,19 @@ predictions=vector(mode="list")
 models=vector(mode="list")
 
 #train_data=normalize(train_data)
-num_hidden_units=40
-lr0=ifelse(num_hidden_units>4,.01,.07)
+num_hidden_units=100
+#lr0=ifelse(num_hidden_units>20,.02,.07)
+
+lr0=.07
 #without train dim it errors on summary
-l2reg=.00001
+l2reg=0
 input_layer <- layer_input(shape = 1, name = 'input')
 output_layer <- input_layer %>% layer_dense(units = num_hidden_units, activation = 'tanh',kernel_regularizer = regularizer_l2(l2reg),bias_initializer=initializer_random_uniform(minval = -0.1, maxval = 0.1, seed = 104), kernel_initializer=initializer_random_normal(mean=0,stddev=.1, seed = 104))  %>% layer_dense(units = 1,,kernel_regularizer = regularizer_l2(l2reg),,bias_initializer=initializer_random_uniform(minval = -0.1, maxval = 0.1, seed = 104), kernel_initializer=initializer_random_normal(mean=0,stddev=.1, seed = 104)) 
-
-
 
 model_simple <- keras_model(inputs = input_layer, outputs = output_layer )
 
 #,clipnorm=1,,clipvalue=1
-opt <- optimizer_sgd(lr = lr0,momentum=.9)
+opt <- optimizer_sgd(lr = lr0,momentum=0)
 
 model_simple %>% compile(
   optimizer = opt, 
@@ -111,7 +111,8 @@ hist_approx<-model_simple %>% fit(train_data, train_target,
   }
   
 }
-),callback_terminate_on_naan(),lr_reducer,callback_reduce_lr_on_plateau(monitor = "loss", factor = 0.5)  
+),callback_terminate_on_naan(),lr_reducer
+,callback_reduce_lr_on_plateau(monitor = "loss", factor = .5)  
 
 )
 )
